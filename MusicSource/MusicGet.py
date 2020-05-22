@@ -1,4 +1,5 @@
 import json
+import threading
 from urllib.parse import quote
 import pymysql
 import requests
@@ -29,13 +30,14 @@ class QQMusic:
         # response1 = json.loads(requests.get(url=url, headers=headers).content.decode('utf-8'))['data']['song']['time']
         # print(response1)
         return [x['mid'] for x in response], list(
-            map(lambda x: [time.strftime('%M:%S', time.gmtime(x['interval'])), ''.join(x['title'].split()), ''.join(x['album']['pmid'].split()),
+            map(lambda x: [time.strftime('%M:%S', time.gmtime(x['interval'])), ''.join(x['title'].split()),
+                           ''.join(x['album']['pmid'].split()),
                            '/'.join([i['name'] for i in x['singer']])], response))
 
     def sprider(self):
         songmids, informations = self.get_mid()
         # print(songmids)
-        print(informations)
+        # print(informations)
         newinfro = []
         for songmid, information in zip(songmids, informations):
             data = '%7B%22req%22%3A%7B%22module%22%3A%22CDN.SrfCdnDispatchServer%22%2C%22method%22%3A' \
@@ -68,12 +70,26 @@ class QQMusic:
 
 def start(name):
     a = QQMusic(name)
-    print('>>开始爬取QQ音乐')
+    # print('>>开始爬取QQ音乐')
     a_ = a.sprider()
-    print(a_)
+    # print(a_)
     for i in a_:
-        print(i[0] + " " + i[1] + " " + "https://y.gtimg.cn/music/photo_new/T002R300x300M000"+i[2]+".jpg" + " " + i[3] + " " + i[4])
-        mysql(i[0], i[1], "https://y.gtimg.cn/music/photo_new/T002R300x300M000"+i[2]+".jpg", i[3], i[4])
+        # print(i[0] + " " + i[1] + " " + "https://y.gtimg.cn/music/photo_new/T002R300x300M000" + i[2] + ".jpg" + " " + i[
+        #     3] + " " + i[4])
+        mysql_initial(i[0], i[1], "https://y.gtimg.cn/music/photo_new/T002R300x300M000" + i[2] + ".jpg", i[3], i[4])
+    print("初始化完成！")
+
+
+def update(name):
+    a = QQMusic(name)
+    # print('>>开始爬取QQ音乐')
+    a_ = a.sprider()
+    # print(a_)
+    for i in a_:
+        # print(i[0] + " " + i[1] + " " + "https://y.gtimg.cn/music/photo_new/T002R300x300M000" + i[2] + ".jpg" + " " + i[
+        #     3] + " " + i[4])
+        mysql_update(i[0], i[1], "https://y.gtimg.cn/music/photo_new/T002R300x300M000" + i[2] + ".jpg", i[3], i[4])
+    print("更新完成！")
 
 
 class down_mysql:
@@ -97,12 +113,13 @@ class down_mysql:
     def save_mysql(self):
         sql = "insert into jemoudel_musicintro(`music_name`,`music_URL`,`music_singer`,`music_time`, `music_pic`) VALUES (%s,%s,%s,%s,%s)"
         try:
-            self.cursor.execute(sql, (self.music_name, self.music_url, self.music_singer, self.music_time, self.music_pic))
+            self.cursor.execute(sql,
+                                (self.music_name, self.music_url, self.music_singer, self.music_time, self.music_pic))
             self.connect.commit()
-            print("success")
+            # print("success")
         except:
             self.connect.rollback()
-            print("fail")
+            # print("fail")
 
     def update_mysql(self):
         sql = "update jemoudel_musicintro set music_URL = '%s'  where music_name='%s' and music_singer='%s'" % (
@@ -110,19 +127,39 @@ class down_mysql:
         try:
             self.cursor.execute(sql)
             self.connect.commit()
-            print("success")
+            # print("success")
         except:
             self.connect.rollback()
-            print("fail")
+            # print("fail")
 
 
-def mysql(music_time, music_name, music_pic, music_singer, music_url):
+def sleeptime(hour, min, sec):
+    return hour*3600 + min*60 + sec
+
+
+def mysql_initial(music_time, music_name, music_pic, music_singer, music_url):
+    down = down_mysql(music_time, music_name, music_pic, music_singer, music_url)
+    down.save_mysql()
+
+
+def mysql_update(music_time, music_name, music_pic, music_singer, music_url):
     down = down_mysql(music_time, music_name, music_pic, music_singer, music_url)
     down.update_mysql()
+
+
+def update1():
+    ff = open("singer.txt", encoding="utf8")
+    for line in ff:
+        print(line.strip())
+        update(line.strip())
+    print(time.time())
+    threading.Timer(30, update1).start()
 
 
 if __name__ == '__main__':
     f = open("singer.txt", encoding="utf8")
     for line in f:
-        print(line.strip())
+        # print(line.strip())
         start(line.strip())
+
+    update1()
