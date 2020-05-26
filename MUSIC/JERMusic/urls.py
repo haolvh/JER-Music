@@ -1,7 +1,7 @@
 #!/usr/bin/env python  
 # -*- coding:utf-8 _*-
 """ 
-@author:lvhao
+@author:LvHao
 @license: Apache Licence 
 @file: urls.py.py 
 @time: 2020/05/24
@@ -15,9 +15,9 @@ from JERMusic.views import collect, show_song, search, login, register, play, do
 
 urlpatterns = [
 
-    path('user', collect),
+    path('user', show_collection),
 
-    path('show_collection', show_collection),
+    path('collect', collect),
 
     path('login', login),
 

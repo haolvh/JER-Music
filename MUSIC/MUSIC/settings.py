@@ -25,7 +25,7 @@ SECRET_KEY = 'oaupo_rg0^#%m0d=f%&gxv(5=h!0cyp^+*w7d8q(u9zm%39g)z'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['musictest.free.idcfengye.com', '127.0.0.1']
 
 
 # Application definition

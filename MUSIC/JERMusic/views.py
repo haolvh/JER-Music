@@ -11,6 +11,7 @@ from django.shortcuts import render
 from JERMusic.models import Clist, MusicIntro, User
 from MusicSource.MusicGet import music_source
 
+
 music_source()
 
 
@@ -18,8 +19,9 @@ music_source()
 def collect(request):
     # 接受前端POST请求数据
     # 将request中的接送数据提取出来
-    info = json.loads(request.body)
+    # info = json.loads(request.body)
     try:
+        info = json.loads(request.body)
         user_name = info['username']
         music_name = info['music_name']
         # print(user_name)
@@ -38,8 +40,12 @@ def collect(request):
         # 如果当前记录不在  则插入该条记录
         try:
             data = Clist.objects.values().filter(music_name=music_name, user_name=user_name)
-            if (list(data).__len__()) > 0:
-                result = {"ret": -1, "msg": "该歌曲已收藏！"}
+            data_ = User.objects.values().filter(user_name=user_name)
+            # print(data_)
+            if list(data).__len__() > 0:
+                result = {"ret": -1, "msg": "该歌曲已收藏!"}
+            elif list(data_).__len__() == 0:
+                result = {"ret": -1, "msg": "该用户不存在!请先注册！！！"}
             else:
                 song = list(MusicIntro.objects.values('music_name', 'music_time', 'music_singer') \
                             .filter(music_name=music_name))
@@ -52,7 +58,7 @@ def collect(request):
                         time=song[0]['music_time'],
                     )
                     if record:
-                        result = {"ret": 0, "data": song}
+                        result = {"ret": 0, "msg": "用户收藏成功！"}
                     else:
                         result = {"ret": -1, "msg": "插入数据失败!"}
                 else:
@@ -70,14 +76,19 @@ def collect(request):
 # 用户收藏展示业务处理
 def show_collection(request):
     # 检查url是否有参数
-    ph = request.GET.get("user_name", None)
+    ph = request.GET.get("username", None)
     # 如果有，则添加过滤条件
-    try:
-        song_list = Clist.objects.values()
-        data = list(song_list)
-        result = {"ret": 0, "total": data.__len__(), "col_song": data}
-    except Exception as e:
-        result = {"ret": -1, "msg": "获取信息失败" + str(e)}
+    if ph is None or ph == '':
+        result = {"ret": -1, "msg": "username参数不存在！"}
+    elif list(User.objects.values().filter(user_name=ph)).__len__() == 0:
+        result = {"ret": -1, "msg": "该用户不存在！请先注册！"}
+    else:
+        try:
+            song_list = Clist.objects.values('music_name', 'singer', 'time').filter(user_name=ph)
+            data = list(song_list)
+            result = {"ret": 0, "total": data.__len__(), "col_song": data}
+        except Exception as e:
+            result = {"ret": -1, "msg": "获取信息失败" + str(e)}
     return JsonResponse(result)
 
 
@@ -86,7 +97,7 @@ def show_song(request):
     # 首页分页查询
     # 接受GET请求
     page = request.GET.get('page', default=1)
-    page_size = int(request.GET.get('pageSize', default=8))
+    page_size = int(request.GET.get('pageSize', default=10))
     result = {}
 
     song_list = MusicIntro.objects.values('music_name', 'music_URL', 'music_singer', 'music_pic', 'music_time')
@@ -109,7 +120,7 @@ def search(request):
     if keyword is not None and keyword != '':
         try:
             song = MusicIntro.objects.values('music_name', 'music_URL', 'music_singer', 'music_time') \
-                .filter(Q(music_name__contains=keyword) | Q(music_singer__contains=keyword))
+                .filter(Q(music_name__icontains=keyword) | Q(music_singer__icontains=keyword))
             # print(song)
             # data['music_url'] = data.pop('music_URL')
             data = list(song)
